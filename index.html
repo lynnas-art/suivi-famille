@@ -1,573 +1,75 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>🌈 Suivi Famille</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stoïkos - Suivi famille</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root {
-    --pink:#ec4899;--pink-light:#fce7f3;--pink-mid:#f9a8d4;
-    --green:#34d399;--green-light:#d1fae5;
-    --yellow:#fbbf24;--yellow-light:#fef3c7;
-    --red:#f87171;--red-light:#fee2e2;
-    --blue:#60a5fa;--blue-light:#dbeafe;
-    --bg:linear-gradient(135deg,#fff0f6 0%,#f0f4ff 50%,#f0fff4 100%);
-    --card:rgba(255,255,255,0.92);--text:#2d2d2d;--muted:#9ca3af;
-    --radius:20px;--shadow:0 4px 24px rgba(236,72,153,0.10);
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
-  .blob1{position:fixed;top:-80px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,#fbcfe8 0%,transparent 70%);border-radius:50%;pointer-events:none;z-index:0;}
-  .blob2{position:fixed;bottom:-100px;left:-60px;width:350px;height:350px;background:radial-gradient(circle,#bfdbfe 0%,transparent 70%);border-radius:50%;pointer-events:none;z-index:0;}
-  header{position:relative;z-index:10;background:rgba(255,255,255,0.88);backdrop-filter:blur(10px);border-bottom:2px solid var(--pink-light);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
-  .logo{font-family:'Fredoka One',cursive;font-size:22px;color:var(--pink);}
-  .week-pill{background:var(--pink-light);color:#be185d;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:700;}
-  nav{position:relative;z-index:10;background:rgba(255,255,255,0.75);backdrop-filter:blur(6px);border-bottom:1px solid var(--pink-mid);display:flex;overflow-x:auto;padding:0 8px;gap:2px;}
-  nav button{background:none;border:none;padding:11px 15px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s;}
-  nav button.active{color:var(--pink);border-bottom-color:var(--pink);}
-  main{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:20px 14px 60px;}
-  .card{background:var(--card);border-radius:var(--radius);padding:22px;border:2px solid var(--pink-light);box-shadow:var(--shadow);margin-bottom:16px;}
-  .child-tabs{display:flex;gap:10px;margin-bottom:16px;}
-  .child-tab{background:#f9fafb;border:2px solid #e5e7eb;border-radius:14px;padding:8px 20px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:#6b7280;transition:all .2s;}
-  .child-tab.active{background:var(--pink-light);border-color:var(--pink-mid);color:var(--pink);}
-  .section-title{font-family:'Fredoka One',cursive;font-size:19px;color:var(--pink);margin-bottom:14px;}
-  .two-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;}
-  .child-card{background:var(--card);border-radius:var(--radius);padding:22px;border:2px solid var(--pink-light);box-shadow:var(--shadow);}
-  .card-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
-  .big-emoji{font-size:40px;}
-  .child-name{font-family:'Fredoka One',cursive;font-size:22px;color:var(--pink);}
-  .screen-badge{display:inline-block;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:800;margin-top:4px;}
-  .pts-row{display:flex;align-items:baseline;gap:4px;margin-bottom:8px;}
-  .pts-num{font-size:54px;font-weight:900;line-height:1;}
-  .pts-den{font-size:20px;color:#cbd5e1;}
-  .bar-bg{height:12px;background:#f1f5f9;border-radius:99px;overflow:hidden;margin-bottom:14px;}
-  .bar-fill{height:100%;border-radius:99px;transition:width .5s ease;}
-  .btn-row{display:flex;gap:10px;margin-bottom:14px;}
-  .btn-minus{flex:2;background:linear-gradient(135deg,#fda4af,#fb7185);color:#fff;border:none;border-radius:12px;padding:10px 8px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;}
-  .btn-plus{flex:1;background:linear-gradient(135deg,#6ee7b7,#34d399);color:#fff;border:none;border-radius:12px;padding:10px 8px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;}
-  .events-box{border-top:1px dashed var(--pink-light);padding-top:10px;}
-  .evt-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:5px 0;border-bottom:1px dashed #f9a8d4;}
-  .evt-label{flex:1;font-size:13px;color:#4b5563;min-width:120px;}
-  .evt-pts{font-weight:800;font-size:14px;min-width:36px;text-align:right;}
-  .evt-date{color:var(--muted);font-size:11px;width:100%;}
-  .deduct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
-  .deduct-btn{background:#fff8f8;border:2px solid #fecdd3;border-radius:14px;padding:12px 10px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:4px;transition:transform .1s;}
-  .deduct-btn:hover{transform:scale(1.03);}
-  .deduct-emoji{font-size:20px;}
-  .deduct-label{font-size:12px;color:#374151;font-weight:700;line-height:1.3;}
-  .deduct-pts{font-size:14px;color:#f43f5e;font-weight:900;}
-  .chore-section{background:rgba(255,255,255,0.9);border-radius:18px;padding:18px;margin-bottom:14px;border:2px solid var(--pink-light);}
-  .chore-section-title{font-family:'Fredoka One',cursive;font-size:17px;color:var(--pink);margin-bottom:6px;}
-  .chore-subtitle{font-size:12px;color:var(--muted);margin-bottom:10px;}
-  .chore-row{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px dashed var(--pink-light);}
-  .chore-row:last-child{border-bottom:none;}
-  .chore-row.disabled{opacity:0.35;}
-  .checkbox{width:28px;height:28px;border-radius:8px;border:2px solid var(--pink-mid);background:#fff;cursor:pointer;font-weight:900;font-size:16px;color:var(--pink);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
-  .checkbox.done{background:var(--pink-light);border-color:var(--pink);}
-  .chore-label{flex:1;font-size:14px;color:#374151;font-weight:600;}
-  .chore-owner{font-size:11px;color:var(--muted);background:#f3f4f6;border-radius:10px;padding:2px 8px;}
-  .rule-row{display:flex;align-items:flex-start;gap:14px;padding:10px 0;border-bottom:1px dashed var(--pink-light);}
-  .rule-row:last-child{border-bottom:none;}
-  .rule-emoji{font-size:22px;flex-shrink:0;}
-  .rule-num{background:var(--pink-light);color:var(--pink);width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-weight:900;font-size:13px;flex-shrink:0;}
-  .rule-text{font-size:14px;color:#374151;font-weight:600;line-height:1.5;}
-  .screen-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px;margin-bottom:6px;}
-  .screen-range{font-weight:700;font-size:14px;color:#374151;}
-  .screen-time{font-weight:900;font-size:14px;color:var(--pink);}
-  .archive-controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
-  select{background:#fff;border:2px solid var(--pink-mid);border-radius:10px;padding:8px 12px;font-size:14px;font-family:'Nunito',sans-serif;color:#374151;font-weight:700;}
-  .archive-summary{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 0 16px;border-bottom:2px dashed var(--pink-light);margin-bottom:12px;}
-  .archive-name{font-size:18px;font-family:'Fredoka One',cursive;color:var(--pink);}
-  .archive-pts{font-size:18px;font-weight:900;}
-  .archive-screen{font-size:13px;color:#6b7280;font-weight:700;}
-  /* ADMIN */
-  .admin-pin{display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px 0;}
-  .pin-title{font-family:'Fredoka One',cursive;font-size:22px;color:var(--pink);}
-  .pin-input{font-size:28px;letter-spacing:8px;text-align:center;width:160px;border:2px solid var(--pink-mid);border-radius:14px;padding:10px;font-family:'Nunito',sans-serif;color:var(--pink);}
-  .motif-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--pink-light);}
-  .motif-row:last-child{border-bottom:none;}
-  .motif-emoji-input{width:50px;font-size:20px;text-align:center;border:2px solid var(--pink-mid);border-radius:8px;padding:4px;}
-  .motif-label-input{flex:1;border:2px solid var(--pink-mid);border-radius:8px;padding:6px 10px;font-family:'Nunito',sans-serif;font-size:13px;}
-  .motif-pts-input{width:55px;border:2px solid var(--pink-mid);border-radius:8px;padding:6px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;text-align:center;}
-  .btn-icon{background:none;border:none;cursor:pointer;font-size:18px;padding:4px;border-radius:8px;transition:background .2s;}
-  .btn-icon:hover{background:#fee2e2;}
-  .btn-add{background:linear-gradient(135deg,#f9a8d4,#ec4899);color:#fff;border:none;border-radius:12px;padding:10px 20px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;margin-top:14px;}
-  .btn-save{background:linear-gradient(135deg,#6ee7b7,#34d399);color:#fff;border:none;border-radius:12px;padding:10px 20px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;margin-top:10px;width:100%;}
-  /* MODAL */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px;}
-  .modal{background:#fff;border-radius:24px;padding:28px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;border:2px solid var(--pink-light);box-shadow:0 20px 60px rgba(236,72,153,0.15);}
-  .modal-title{font-family:'Fredoka One',cursive;font-size:20px;color:var(--pink);margin-bottom:18px;}
-  input[type=text],input[type=number],input[type=password]{width:100%;background:#fff8f8;border:2px solid #fecdd3;border-radius:10px;padding:10px 14px;font-size:14px;font-family:'Nunito',sans-serif;color:#374151;margin-bottom:10px;}
-  .btn-confirm{width:100%;background:linear-gradient(135deg,#f9a8d4,#ec4899);color:#fff;border:none;border-radius:12px;padding:12px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;margin-bottom:8px;}
-  .btn-cancel{width:100%;background:#f9fafb;color:var(--muted);border:2px solid #e5e7eb;border-radius:12px;padding:12px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;}
-  .empty{color:var(--muted);text-align:center;padding:20px 0;font-style:italic;}
-  .loading{color:var(--muted);text-align:center;padding:30px;font-size:16px;}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 24px;border-radius:20px;font-weight:700;font-size:14px;z-index:300;animation:fadeup .3s ease;}
-  @keyframes fadeup{from{opacity:0;transform:translateX(-50%) translateY(10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
-  .input-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
-  .input-row label{font-weight:700;color:#6b7280;white-space:nowrap;}
-  .input-row input{margin-bottom:0;}
-  .toggle-actif{width:36px;height:20px;border-radius:99px;border:none;cursor:pointer;transition:background .2s;flex-shrink:0;}
-  .toggle-actif.on{background:#34d399;}
-  .toggle-actif.off{background:#d1d5db;}
+:root{--ink:#243047;--muted:#697386;--bg:#f5f7ff;--card:#fff;--violet:#7c3aed;--pink:#ec4899;--green:#10b981;--red:#ef4444;--line:#e7e9f2}*{box-sizing:border-box}body{margin:0;font-family:Nunito,system-ui,sans-serif;background:linear-gradient(135deg,#fff1f7,#f2f5ff 55%,#effff7);color:var(--ink)}header{padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;background:#ffffffd9;backdrop-filter:blur(10px);border-bottom:1px solid var(--line);z-index:2}.brand{font-size:1.35rem;font-weight:900}.badge{background:#ede9fe;color:#5b21b6;padding:8px 12px;border-radius:999px;font-weight:800}main{max-width:920px;margin:auto;padding:22px}.hero{display:grid;grid-template-columns:1.3fr .7fr;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:0 10px 32px #4c1d9510;margin-bottom:16px}h1,h2,h3{margin:0 0 10px}p{color:var(--muted)}.score{font-size:3.2rem;font-weight:900;color:var(--violet)}.tasks{display:grid;gap:10px}.task{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:16px;padding:14px}.task.done{background:#ecfdf5;border-color:#a7f3d0}.label{font-weight:800}.meta{font-size:.85rem;color:var(--muted)}button,select,input{font:inherit}button{border:0;border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer;background:var(--violet);color:white}button.secondary{background:#eef2ff;color:#4338ca}button:disabled{opacity:.45;cursor:not-allowed}.optional{display:grid;grid-template-columns:1fr auto;gap:10px}.notice{padding:12px;border-radius:14px;background:#fff7ed;color:#9a3412}.success{background:#ecfdf5;color:#065f46}.error{background:#fef2f2;color:#991b1b}.children{display:flex;flex-wrap:wrap;gap:10px}.child{background:#fff;border:2px solid var(--line);color:var(--ink)}.child.active{border-color:var(--violet);background:#f5f3ff}.small{font-size:.86rem}.hidden{display:none!important}@media(max-width:680px){.hero{grid-template-columns:1fr}.optional{grid-template-columns:1fr}.score{font-size:2.5rem}}
 </style>
 </head>
 <body>
-<div class="blob1"></div>
-<div class="blob2"></div>
-<header>
-  <div class="logo">🌈 Suivi Famille</div>
-  <div class="week-pill" id="week-pill">Chargement...</div>
-</header>
-<nav>
-  <button class="active" onclick="showTab('accueil')">🏠 Accueil</button>
-  <button onclick="showTab('comportement')">⭐ Comportement</button>
-  <button onclick="showTab('corvees')">✅ Corvées</button>
-  <button onclick="showTab('regles')">📋 Règles</button>
-  <button onclick="showTab('archive')">📦 Archive</button>
-  <button onclick="showTab('admin')">⚙️ Admin</button>
-</nav>
-<main id="main"><div class="loading">⏳ Connexion...</div></main>
-<div class="overlay" id="modal" style="display:none" onclick="closeModal()">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-title" id="modal-title"></div>
-    <div id="modal-body"></div>
-  </div>
-</div>
+<header><div class="brand">🌈 Stoïkos</div><div id="cycle" class="badge">Chargement…</div></header>
+<main id="app"><div class="card">Connexion à Supabase…</div></main>
 <script>
 const SUPABASE_URL='https://vxippwxflbmiximzlvmo.supabase.co';
 const SUPABASE_KEY='sb_publishable_IwJG0MgCbUgjxh5w4EH6aQ_OGmhkuza';
-const ADMIN_PIN='1234'; // ← changez ce PIN !
-const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const CHILDREN=['Adèle','Noah'];
-const INIT_PTS=20;
 const FAMILLE='Famille_Legrand';
-
-// Corvées fixes
-const COUVERT=[
-  {key:'couvert_0',label:'Lundi soir',dayOffset:2},{key:'couvert_1',label:'Mardi soir',dayOffset:3},
-  {key:'couvert_2',label:'Mercredi midi',dayOffset:4},{key:'couvert_3',label:'Mercredi soir',dayOffset:4},
-  {key:'couvert_4',label:'Jeudi soir',dayOffset:5},{key:'couvert_5',label:'Vendredi soir',dayOffset:6},
-  {key:'couvert_6',label:'Samedi midi',dayOffset:0},{key:'couvert_7',label:'Samedi soir',dayOffset:0},
-  {key:'couvert_8',label:'Dimanche midi',dayOffset:1},{key:'couvert_9',label:'Dimanche soir',dayOffset:1},
-];
-const ADELE_DOUCHE=[
-  {key:'douche_0',label:'Lundi — sans cheveux',dayOffset:2},{key:'douche_1',label:'Mercredi — sans cheveux',dayOffset:4},
-  {key:'douche_2',label:'Vendredi — sans cheveux',dayOffset:6},{key:'douche_3',label:'Dimanche — avec les cheveux',dayOffset:1},
-];
-const NOAH_DOUCHE=[
-  {key:'douche_sat',label:'Samedi',dayOffset:0},{key:'douche_sun',label:'Dimanche',dayOffset:1},
-  {key:'douche_mon',label:'Lundi',dayOffset:2},{key:'douche_tue',label:'Mardi',dayOffset:3},
-  {key:'douche_wed',label:'Mercredi',dayOffset:4},{key:'douche_thu',label:'Jeudi',dayOffset:5},
-  {key:'douche_fri',label:'Vendredi',dayOffset:6},
-];
-const DEVOIRS=[
-  {key:'devoirs_0',label:'Lundi',dayOffset:2},{key:'devoirs_1',label:'Mardi',dayOffset:3},
-  {key:'devoirs_2',label:'Mercredi',dayOffset:4},{key:'devoirs_3',label:'Jeudi',dayOffset:5},
-  {key:'devoirs_4',label:'Vendredi',dayOffset:6},
-];
-const RANGEMENT=[{key:'rangement_lundi',label:'Ranger ses affaires — lundi soir',dayOffset:2}];
-
-function screenTime(pts){
-  if(pts>=17)return"2h30 d'écran 🎮";if(pts>=13)return"2h d'écran 🎮";
-  if(pts>=9)return"1h30 d'écran 🎮";if(pts>=5)return"1h d'écran 🎮";
-  if(pts>=1)return"30min d'écran 🎮";return"Pas d'écran cette semaine 😢";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const OPTIONALS=[['lave_vaisselle','Vider le lave-vaisselle'],['preparer_manger','Préparer à manger'],['debarrasser_table','Débarrasser toute la table'],['aspirateur_cuisine_sam','Passer l’aspirateur dans la cuisine et la salle à manger']];
+let children=[], child=null, done=[], settings={minutes_par_point:15};
+const parisParts=(d=new Date())=>{const x=new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d);return Object.fromEntries(x.map(p=>[p.type,p.value]))};
+const localDate=(d=new Date())=>{const p=parisParts(d);return `${p.year}-${p.month}-${p.day}`};
+const parseParis=(ymd,h=19)=>new Date(`${ymd}T${String(h).padStart(2,'0')}:00:00+01:00`); // novembre-mars; cycle calcule ci-dessous par decalage relatif
+function cycleBounds(now=new Date()){
+ const p=parisParts(now), noon=new Date(Date.UTC(+p.year,+p.month-1,+p.day,12));
+ const weekday=(noon.getUTCDay()+6)%7; // lundi=0
+ const daysSinceFriday=(weekday-4+7)%7;
+ let fri=new Date(noon);fri.setUTCDate(fri.getUTCDate()-daysSinceFriday);
+ const todayAfter19=daysSinceFriday===0 && (+p.hour>19 || (+p.hour===19 && +p.minute>=0));
+ if(daysSinceFriday===0&&!todayAfter19)fri.setUTCDate(fri.getUTCDate()-7);
+ const y=fri.getUTCFullYear(),m=String(fri.getUTCMonth()+1).padStart(2,'0'),d=String(fri.getUTCDate()).padStart(2,'0');
+ // Conversion robuste de 19 h Europe/Paris vers UTC, y compris lors du changement d'heure.
+ const target=Date.UTC(y,+m-1,+d,19,0,0);let guess=new Date(target);
+ const gp=parisParts(guess);const shown=Date.UTC(+gp.year,+gp.month-1,+gp.day,+gp.hour,+gp.minute,0);
+ const start=new Date(target-(shown-target)), end=new Date(start);end.setUTCDate(end.getUTCDate()+7);
+ return {start,end,key:start.toISOString(),label:`du ${new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',timeZone:'Europe/Paris'}).format(start)} au ${new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',timeZone:'Europe/Paris'}).format(new Date(end-1))}`};
 }
-function localDateStr(d=new Date()){
-  // Retourne YYYY-MM-DD en heure locale (pas UTC)
-  const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const j=String(d.getDate()).padStart(2,'0');
-  return`${y}-${m}-${j}`;
+function todayTasks(name){
+ const p=parisParts(), dow=new Date(`${p.year}-${p.month}-${p.day}T12:00:00`).getDay(), list=[];
+ const add=(key,label,time='avant 19 h')=>list.push({key:`${key}_${localDate()}`,label,time});
+ if(dow===2)add('chambre','Ranger sa chambre');
+ if(dow===1)add('salon','Ranger le salon');
+ add('musique','Faire de la musique');
+ if(dow>=1&&dow<=5)add('devoirs','Faire ses devoirs');
+ if(name==='Noah')add('douche','Prendre sa douche');
+ if(name==='Adèle'&&[0,1,3,6].includes(dow))add('douche','Prendre sa douche');
+ // Couvert : alternance deterministe selon le nombre de jours depuis 01/01/2026. Tous les soirs + sam/dim midi.
+ const epoch=Math.floor(new Date(localDate()+'T12:00:00')-new Date('2026-01-01T12:00:00'))/86400000;
+ const assigned=children[Math.abs(epoch)%children.length]?.prenom;
+ if(name===assigned){add('couvert_soir','Mettre le couvert ce soir');if(dow===0||dow===6)add('couvert_midi','Mettre le couvert à 12 h','avant 12 h');}
+ return list;
 }
-function getMostRecentSaturday(d=new Date()){
-  // getDay(): 0=Dim,1=Lun,2=Mar,3=Mer,4=Jeu,5=Ven,6=Sam
-  // (day+1)%7 : Sam(6)->0, Dim(0)->1, Lun(1)->2, Mar(2)->3, Mer(3)->4, Jeu(4)->5, Ven(5)->6
-  const daysSinceSat=(d.getDay()+1)%7;
-  const sat=new Date(d);sat.setDate(d.getDate()-daysSinceSat);sat.setHours(0,0,0,0);
-  return localDateStr(sat);
+function beforeDeadline(task){const p=parisParts();const limit=task.time.includes('12 h')?12:19;return +p.hour<limit;}
+function points(){return done.reduce((s,r)=>s+(r.points||1),0)}
+function screenMinutes(){return points()*settings.minutes_par_point}
+async function load(){
+ const token=new URLSearchParams(location.search).get('token');
+ let q=db.from('enfants').select('*').eq('famille',FAMILLE).eq('actif',true).order('ordre');
+ const {data,error}=await q;if(error)throw error;children=data||[];
+ child=token?children.find(c=>c.access_token===token):children[0];
+ if(!child)throw new Error('Lien enfant inconnu. Copiez le lien donné par la migration SQL.');
+ const {data:cfg}=await db.from('parametres_stoikos').select('*').eq('famille',FAMILLE).maybeSingle();if(cfg)settings=cfg;
+ await refresh();
 }
-function weekLabel(wk){
-  const d=new Date(wk+'T12:00:00');const e=new Date(d);e.setDate(d.getDate()+6);
-  return`${d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})} → ${e.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`;
-}
-function todayOffset(weekKey){
-  const today=localDateStr();
-  const sat=new Date(weekKey+'T12:00:00');
-  const now=new Date(today+'T12:00:00');
-  return Math.max(0,Math.min(6,Math.round((now-sat)/86400000)));
-}
-function scoreColor(pts){const p=pts/INIT_PTS*100;return p===100?'#34d399':p>=60?'#fbbf24':'#f87171';}
-function scoreBg(pts){const p=pts/INIT_PTS*100;return p===100?'#d1fae5':p>=60?'#fef3c7':'#fee2e2';}
-function scoreTxt(pts){const p=pts/INIT_PTS*100;return p===100?'#065f46':p>=60?'#78350f':'#7f1d1d';}
-function fmtDate(iso){return new Date(iso).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}
-
-// ── STATE ──
-let state={
-  tab:'accueil',weekKey:getMostRecentSaturday(),
-  activeChild:'Adèle',choreChild:'Adèle',archiveChild:'Adèle',archiveWeek:getMostRecentSaturday(),
-  scores:{},events:{},chores:{},allWeeks:[],
-  motifs:[],adminUnlocked:false,
-  editingMotifs:[], // working copy for admin edit
-};
-
-// ── DB ──
-async function loadWeek(weekKey){
-  for(const enfant of CHILDREN){
-    const{data}=await db.from('semaines').select('*').eq('famille',FAMILLE).eq('enfant',enfant).eq('semaine_debut',weekKey).maybeSingle();
-    if(!data){await db.from('semaines').insert({famille:FAMILLE,enfant,semaine_debut:weekKey,points:INIT_PTS});state.scores[enfant]=INIT_PTS;}
-    else state.scores[enfant]=data.points;
-  }
-  const{data:evts}=await db.from('evenements').select('*').eq('famille',FAMILLE).eq('semaine_debut',weekKey).order('created_at',{ascending:false});
-  state.events={'Adèle':[],'Noah':[]};
-  (evts||[]).forEach(e=>state.events[e.enfant].push(e));
-  const{data:chrs}=await db.from('corvees').select('*').eq('famille',FAMILLE).eq('semaine_debut',weekKey);
-  state.chores={'Adèle':{},'Noah':{}};
-  (chrs||[]).forEach(c=>{state.chores[c.enfant][c.cle]=c.fait;});
-}
-async function loadAllWeeks(){
-  const{data}=await db.from('semaines').select('semaine_debut').eq('famille',FAMILLE).order('semaine_debut',{ascending:false});
-  const weeks=[...new Set((data||[]).map(r=>r.semaine_debut))];
-  if(!weeks.includes(state.weekKey))weeks.unshift(state.weekKey);
-  state.allWeeks=weeks;
-}
-async function loadMotifs(){
-  const{data}=await db.from('motifs').select('*').eq('famille',FAMILLE).order('ordre');
-  state.motifs=data||[];
-}
-async function applyDeduction(enfant,label,pts){
-  const newPts=Math.max(0,state.scores[enfant]-pts);
-  await db.from('semaines').update({points:newPts}).eq('famille',FAMILLE).eq('enfant',enfant).eq('semaine_debut',state.weekKey);
-  await db.from('evenements').insert({famille:FAMILLE,enfant,semaine_debut:state.weekKey,label,points:pts});
-  state.scores[enfant]=newPts;
-  state.events[enfant].unshift({enfant,label,points:pts,created_at:new Date().toISOString()});
-  render();showToast(`−${pts} pt${pts>1?'s':''} pour ${enfant}`);
-}
-async function restorePoint(enfant){
-  const newPts=Math.min(INIT_PTS,state.scores[enfant]+1);
-  await db.from('semaines').update({points:newPts}).eq('famille',FAMILLE).eq('enfant',enfant).eq('semaine_debut',state.weekKey);
-  await db.from('evenements').insert({famille:FAMILLE,enfant,semaine_debut:state.weekKey,label:'✨ Point rendu',points:-1});
-  state.scores[enfant]=newPts;
-  state.events[enfant].unshift({enfant,label:'✨ Point rendu',points:-1,created_at:new Date().toISOString()});
-  render();showToast(`+1 pt pour ${enfant} 🎁`);
-}
-async function toggleChore(enfant,cle,currentVal){
-  state.chores[enfant][cle]=!currentVal;
-  await db.from('corvees').upsert({famille:FAMILLE,enfant,semaine_debut:state.weekKey,cle,fait:!currentVal},{onConflict:'famille,enfant,semaine_debut,cle'});
-  render();
-}
-
-// ── ADMIN MOTIFS ──
-async function saveMotifs(){
-  const rows=state.editingMotifs;
-  // Upsert all
-  for(const m of rows){
-    if(m.id&&!m.id.startsWith('new_')){
-      await db.from('motifs').update({emoji:m.emoji,label:m.label,points:m.points,actif:m.actif,ordre:m.ordre}).eq('famille',FAMILLE).eq('id',m.id);
-    } else {
-      await db.from('motifs').insert({famille:FAMILLE,emoji:m.emoji,label:m.label,points:m.points,actif:m.actif,ordre:m.ordre});
-    }
-  }
-  // Delete removed
-  const keepIds=rows.filter(m=>m.id&&!m.id.startsWith('new_')).map(m=>m.id);
-  const origIds=state.motifs.map(m=>m.id);
-  const toDelete=origIds.filter(id=>!keepIds.includes(id));
-  for(const id of toDelete) await db.from('motifs').delete().eq('famille',FAMILLE).eq('id',id);
-  await loadMotifs();
-  state.editingMotifs=JSON.parse(JSON.stringify(state.motifs));
-  render();showToast('✅ Motifs sauvegardés !');
-}
-
-// ── RENDER ──
-function showTab(tab){
-  state.tab=tab;
-  document.querySelectorAll('nav button').forEach((b,i)=>{
-    b.classList.toggle('active',['accueil','comportement','corvees','regles','archive','admin'][i]===tab);
-  });
-  render();
-  if(tab==='archive')loadArchiveContent();
-}
-function render(){
-  document.getElementById('week-pill').textContent=`Sem. du ${weekLabel(state.weekKey)}`;
-  const main=document.getElementById('main');
-  switch(state.tab){
-    case 'accueil':main.innerHTML=renderAccueil();break;
-    case 'comportement':main.innerHTML=renderComportement();break;
-    case 'corvees':main.innerHTML=renderCorvees();break;
-    case 'regles':main.innerHTML=renderRegles();break;
-    case 'archive':main.innerHTML=renderArchive();break;
-    case 'admin':main.innerHTML=renderAdmin();break;
-  }
-}
-
-// ACCUEIL
-function renderAccueil(){
-  return`<div class="two-col">${CHILDREN.map(c=>renderChildCard(c)).join('')}</div>`;
-}
-function renderChildCard(name){
-  const pts=state.scores[name]??INIT_PTS;const pct=pts/INIT_PTS*100;const color=scoreColor(pts);
-  const emoji=name==='Adèle'?'🌸':'🌟';const evts=(state.events[name]||[]).slice(0,4);
-  return`<div class="child-card">
-    <div class="card-head"><span class="big-emoji">${emoji}</span><div>
-      <div class="child-name">${name}</div>
-      <span class="screen-badge" style="background:${scoreBg(pts)};color:${scoreTxt(pts)}">${screenTime(pts)}</span>
-    </div></div>
-    <div class="pts-row"><span class="pts-num" style="color:${color}">${pts}</span><span class="pts-den">/ ${INIT_PTS}</span></div>
-    <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
-    <div class="btn-row">
-      <button class="btn-minus" onclick="openModal('${name}')">− Retirer des points</button>
-      <button class="btn-plus" onclick="restorePoint('${name}')">+1 pt 🎁</button>
-    </div>
-    ${evts.length?`<div class="events-box">${evts.map(e=>`<div class="evt-row">
-      <span class="evt-label">${e.label}</span>
-      <span class="evt-pts" style="color:${e.points>0?'#f87171':'#34d399'}">${e.points>0?'−'+e.points:'+'+Math.abs(e.points)}</span>
-      <span class="evt-date">${fmtDate(e.created_at)}</span></div>`).join('')}</div>`:''}
-  </div>`;
-}
-
-// COMPORTEMENT
-function renderComportement(){
-  const c=state.activeChild;const evts=state.events[c]||[];
-  const motifsActifs=state.motifs.filter(m=>m.actif);
-  return`
-  <div class="child-tabs">${CHILDREN.map(ch=>`<button class="child-tab${ch===c?' active':''}" onclick="setActiveChild('${ch}')">${ch==='Adèle'?'🌸':'🌟'} ${ch}</button>`).join('')}</div>
-  <div class="card">
-    <div class="section-title">Retirer des points à ${c}</div>
-    <div class="deduct-grid">${motifsActifs.map(m=>`
-      <button class="deduct-btn" onclick="handleDeduct('${c}','${m.label}','${m.emoji}',${m.points})">
-        <span class="deduct-emoji">${m.emoji}</span>
-        <span class="deduct-label">${m.label}</span>
-        <span class="deduct-pts">−${m.points} pt${m.points>1?'s':''}</span>
-      </button>`).join('')}
-      <button class="deduct-btn" onclick="openCustomModal('${c}')">
-        <span class="deduct-emoji">⚡</span>
-        <span class="deduct-label">Autre (libre)</span>
-        <span class="deduct-pts">libre</span>
-      </button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="section-title">Historique — ${c}</div>
-    ${evts.length===0?'<p class="empty">Aucun événement cette semaine 🎉</p>':evts.map(e=>`
-    <div class="evt-row">
-      <span class="evt-label">${e.label}</span>
-      <span class="evt-pts" style="color:${e.points>0?'#f87171':'#34d399'}">${e.points>0?'−'+e.points:'+'+Math.abs(e.points)}</span>
-      <span class="evt-date">${fmtDate(e.created_at)}</span>
-    </div>`).join('')}
-  </div>`;
-}
-
-// CORVÉES
-function renderCorvees(){
-  const c=state.choreChild;const offset=todayOffset(state.weekKey);const chores=state.chores[c]||{};
-  const todayCouvert=COUVERT.filter(cv=>cv.dayOffset===offset);
-  const couvertItems=todayCouvert.map(cv=>{const gi=COUVERT.indexOf(cv);return{...cv,owner:gi%2===0?'Adèle':'Noah',isMe:(gi%2===0?'Adèle':'Noah')===c};});
-  const douche=c==='Adèle'?ADELE_DOUCHE:NOAH_DOUCHE;
-  const todayDouche=douche.filter(d=>d.dayOffset===offset);
-  const todayDevoirs=DEVOIRS.filter(d=>d.dayOffset===offset);
-  const todayRangement=RANGEMENT.filter(r=>r.dayOffset===offset);
-  const dayNames=['Samedi','Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-  const todayName=dayNames[offset];
-  const noChores=couvertItems.length===0&&todayDouche.length===0&&todayDevoirs.length===0&&todayRangement.length===0;
-  return`
-  <div class="child-tabs">${CHILDREN.map(ch=>`<button class="child-tab${ch===c?' active':''}" onclick="setChoreChild('${ch}')">${ch==='Adèle'?'🌸':'🌟'} ${ch}</button>`).join('')}</div>
-  <div style="background:var(--pink-light);border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
-    <span style="font-size:22px">📅</span>
-    <div><div style="font-family:'Fredoka One',cursive;font-size:17px;color:var(--pink)">Corvées du jour — ${todayName}</div>
-    <div style="font-size:12px;color:#be185d">Seules les corvées d'aujourd'hui sont affichées</div></div>
-  </div>
-  ${noChores?`<div class="card"><p class="empty">🎉 Pas de corvées aujourd'hui pour ${c} !</p></div>`:''}
-  ${couvertItems.length>0?`<div class="chore-section"><div class="chore-section-title">🍽️ Mettre le couvert</div>
-    ${couvertItems.map(cv=>`<div class="chore-row${!cv.isMe?' disabled':''}">
-      <button class="checkbox${chores[cv.key]?' done':''}" onclick="${cv.isMe?`toggleChore('${c}','${cv.key}',${!!chores[cv.key]})`:'void(0)'}">
-        ${chores[cv.key]?'✓':''}</button>
-      <span class="chore-label">${cv.label}</span>
-      ${!cv.isMe?`<span class="chore-owner">→ ${cv.owner}</span>`:''}
-    </div>`).join('')}</div>`:''}
-  ${todayDouche.length>0?`<div class="chore-section"><div class="chore-section-title">🚿 Douche avant le dîner</div>
-    ${todayDouche.map(d=>`<div class="chore-row">
-      <button class="checkbox${chores[d.key]?' done':''}" onclick="toggleChore('${c}','${d.key}',${!!chores[d.key]})">${chores[d.key]?'✓':''}</button>
-      <span class="chore-label">${d.label}</span></div>`).join('')}</div>`:''}
-  ${todayDevoirs.length>0?`<div class="chore-section"><div class="chore-section-title">📚 Devoirs avant le dîner</div>
-    ${todayDevoirs.map(d=>`<div class="chore-row">
-      <button class="checkbox${chores[d.key]?' done':''}" onclick="toggleChore('${c}','${d.key}',${!!chores[d.key]})">${chores[d.key]?'✓':''}</button>
-      <span class="chore-label">Faire ses devoirs</span></div>`).join('')}</div>`:''}
-  ${todayRangement.length>0?`<div class="chore-section"><div class="chore-section-title">📦 Rangement</div>
-    ${todayRangement.map(r=>`<div class="chore-row">
-      <button class="checkbox${chores[r.key]?' done':''}" onclick="toggleChore('${c}','${r.key}',${!!chores[r.key]})">${chores[r.key]?'✓':''}</button>
-      <span class="chore-label">${r.label}</span></div>`).join('')}</div>`:''}`;
-}
-
-// RÈGLES
-function renderRegles(){
-  const rules=[
-    {emoji:'🙏',text:'Respecter les adultes et ne pas répondre'},
-    {emoji:'🍽️',text:'Bien se tenir à table : manger proprement et respectueusement'},
-    {emoji:'🥣',text:"Débarrasser son assiette en sortant de table (vider les restes + lave-vaisselle)"},
-    {emoji:'🌙',text:"Coucher : monter à 20h30, se laver les dents, pyjama, au lit. Lecture possible jusqu'à 21h"},
-  ];
-  const couvertRules=["Table nettoyée à l'éponge","Assiettes et couverts","Serviette + verre d'eau","Bouteille d'eau remplie","Dessous de plat","Sel, poivre, vinaigrette"];
-  const screenRows=[
-    {range:'20 – 17 pts',time:"2h30 d'écran",bg:'#d1fae5'},{range:'16 – 13 pts',time:"2h d'écran",bg:'#fef3c7'},
-    {range:'12 – 9 pts',time:"1h30 d'écran",bg:'#ffedd5'},{range:'8 – 5 pts',time:"1h d'écran",bg:'#fee2e2'},
-    {range:'4 – 1 pts',time:'30 min',bg:'#fce7f3'},{range:'0 pt',time:"Pas d'écran",bg:'#f1f5f9'},
-  ];
-  return`
-  <div class="card"><div class="section-title">📋 Règles de comportement</div>
-    ${rules.map(r=>`<div class="rule-row"><span class="rule-emoji">${r.emoji}</span><span class="rule-text">${r.text}</span></div>`).join('')}</div>
-  <div class="card"><div class="section-title">🍽️ Règles du couvert</div>
-    ${couvertRules.map((r,i)=>`<div class="rule-row"><span class="rule-num">${i+1}</span><span class="rule-text">${r}</span></div>`).join('')}</div>
-  <div class="card"><div class="section-title">🎮 Temps d'écran selon les points</div>
-    ${screenRows.map(r=>`<div class="screen-row" style="background:${r.bg}"><span class="screen-range">${r.range}</span><span class="screen-time">${r.time}</span></div>`).join('')}</div>`;
-}
-
-// ARCHIVE
-function renderArchive(){
-  const weeks=state.allWeeks.length?state.allWeeks:[state.weekKey];
-  return`<div class="card"><div class="section-title">📦 Archive des semaines</div>
-    <div class="archive-controls">
-      <select onchange="setArchiveWeek(this.value)">
-        ${weeks.map(w=>`<option value="${w}"${w===state.archiveWeek?' selected':''}>${weekLabel(w)}${w===state.weekKey?' ← en cours':''}</option>`).join('')}
-      </select>
-      <select onchange="setArchiveChild(this.value)">
-        ${CHILDREN.map(c=>`<option${c===state.archiveChild?' selected':''}>${c}</option>`).join('')}
-      </select>
-    </div>
-    <div id="archive-content"><div class="loading">⏳ Chargement...</div></div>
-  </div>`;
-}
-async function loadArchiveContent(){
-  const enfant=state.archiveChild,wk=state.archiveWeek;
-  const{data:sem}=await db.from('semaines').select('points').eq('famille',FAMILLE).eq('enfant',enfant).eq('semaine_debut',wk).maybeSingle();
-  const pts=sem?sem.points:INIT_PTS;
-  const{data:evts}=await db.from('evenements').select('*').eq('famille',FAMILLE).eq('enfant',enfant).eq('semaine_debut',wk).order('created_at',{ascending:false});
-  const el=document.getElementById('archive-content');if(!el)return;
-  el.innerHTML=`<div class="archive-summary">
-    <span class="archive-name">${enfant}</span>
-    <span class="archive-pts" style="color:${scoreColor(pts)}">${pts}/${INIT_PTS} pts</span>
-    <span class="archive-screen">${screenTime(pts)}</span></div>
-    ${!evts||evts.length===0?'<p class="empty">Aucun événement enregistré.</p>':evts.map(e=>`
-    <div class="evt-row">
-      <span class="evt-label">${e.label}</span>
-      <span class="evt-pts" style="color:${e.points>0?'#f87171':'#34d399'}">${e.points>0?'−'+e.points:'+'+Math.abs(e.points)}</span>
-      <span class="evt-date">${fmtDate(e.created_at)}</span>
-    </div>`).join('')}`;
-}
-
-// ADMIN
-function renderAdmin(){
-  if(!state.adminUnlocked){
-    return`<div class="card"><div class="admin-pin">
-      <div class="pin-title">🔐 Zone Parents</div>
-      <p style="color:var(--muted);font-size:14px;text-align:center">Entrez le code PIN pour accéder à l'administration</p>
-      <input class="pin-input" type="password" id="pin-field" maxlength="4" placeholder="••••" onkeydown="if(event.key==='Enter')checkPin()"/>
-      <button class="btn-confirm" style="width:160px" onclick="checkPin()">Entrer</button>
-    </div></div>`;
-  }
-  const rows=state.editingMotifs;
-  return`<div class="card">
-    <div class="section-title">⚙️ Gestion des motifs de déduction</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Modifiez les motifs, leurs emojis, labels et points. Désactivez ceux que vous ne voulez pas afficher.</p>
-    <div id="motifs-list">
-    ${rows.map((m,i)=>`<div class="motif-row" id="motif-row-${i}">
-      <input class="motif-emoji-input" value="${m.emoji}" oninput="updateMotif(${i},'emoji',this.value)" maxlength="2"/>
-      <input class="motif-label-input" value="${m.label}" oninput="updateMotif(${i},'label',this.value)"/>
-      <input class="motif-pts-input" type="number" min="1" max="20" value="${m.points}" oninput="updateMotif(${i},'points',parseInt(this.value)||1)"/>
-      <button class="toggle-actif ${m.actif?'on':'off'}" title="${m.actif?'Actif':'Inactif'}" onclick="toggleMotifActif(${i})">${m.actif?'✓':'✗'}</button>
-      <button class="btn-icon" onclick="deleteMotif(${i})" title="Supprimer">🗑️</button>
-    </div>`).join('')}
-    </div>
-    <button class="btn-add" onclick="addMotif()">+ Ajouter un motif</button>
-    <button class="btn-save" onclick="saveMotifs()">💾 Sauvegarder</button>
-    <button class="btn-cancel" style="margin-top:8px" onclick="state.adminUnlocked=false;render()">🔒 Verrouiller</button>
-  </div>`;
-}
-function checkPin(){
-  const val=document.getElementById('pin-field')?.value;
-  if(val===ADMIN_PIN){state.adminUnlocked=true;state.editingMotifs=JSON.parse(JSON.stringify(state.motifs));render();}
-  else{showToast('❌ PIN incorrect');document.getElementById('pin-field').value='';}
-}
-function updateMotif(i,field,val){state.editingMotifs[i][field]=val;}
-function toggleMotifActif(i){
-  state.editingMotifs[i].actif=!state.editingMotifs[i].actif;
-  const btn=document.querySelector(`#motif-row-${i} .toggle-actif`);
-  if(btn){btn.className=`toggle-actif ${state.editingMotifs[i].actif?'on':'off'}`;btn.textContent=state.editingMotifs[i].actif?'✓':'✗';}
-}
-function deleteMotif(i){state.editingMotifs.splice(i,1);render();}
-function addMotif(){
-  state.editingMotifs.push({id:'new_'+Date.now(),emoji:'⚡',label:'Nouveau motif',points:1,actif:true,ordre:state.editingMotifs.length+1});
-  render();
-}
-
-// MODAL déduction
-function openModal(child){
-  const motifsActifs=state.motifs.filter(m=>m.actif);
-  document.getElementById('modal-title').textContent=`Retirer des points — ${child}`;
-  document.getElementById('modal-body').innerHTML=`
-    <div class="deduct-grid">${motifsActifs.map(m=>`
-      <button class="deduct-btn" onclick="handleDeductModal('${child}','${m.label}','${m.emoji}',${m.points})">
-        <span class="deduct-emoji">${m.emoji}</span>
-        <span class="deduct-label">${m.label}</span>
-        <span class="deduct-pts">−${m.points} pt${m.points>1?'s':''}</span>
-      </button>`).join('')}
-      <button class="deduct-btn" onclick="handleDeductModal('${child}','Autre','⚡',0)">
-        <span class="deduct-emoji">⚡</span><span class="deduct-label">Autre (libre)</span><span class="deduct-pts">libre</span>
-      </button>
-    </div>
-    <button class="btn-cancel" style="margin-top:12px" onclick="closeModal()">Annuler</button>`;
-  document.getElementById('modal').style.display='flex';
-}
-function handleDeductModal(child,label,emoji,pts){
-  if(pts===0){showCustomForm(child);return;}
-  closeModal();applyDeduction(child,`${emoji} ${label}`,pts);
-}
-function openCustomModal(child){
-  document.getElementById('modal-title').textContent=`Autre motif — ${child}`;
-  showCustomForm(child);
-  document.getElementById('modal').style.display='flex';
-}
-function showCustomForm(child){
-  document.getElementById('modal-body').innerHTML=`
-    <input type="text" id="custom-label" placeholder="Description de l'incident…"/>
-    <div class="input-row"><label>Points :</label><input type="number" id="custom-pts" value="1" min="1" max="20" style="width:70px;margin-bottom:0"/></div>
-    <button class="btn-confirm" onclick="confirmCustom('${child}')">Confirmer</button>
-    <button class="btn-cancel" onclick="closeModal()">Annuler</button>`;
-}
-function confirmCustom(child){
-  const label=document.getElementById('custom-label')?.value.trim();
-  const pts=parseInt(document.getElementById('custom-pts')?.value)||1;
-  if(label){closeModal();applyDeduction(child,`⚡ ${label}`,pts);}
-}
-function closeModal(){document.getElementById('modal').style.display='none';}
-function handleDeduct(child,label,emoji,pts){applyDeduction(child,`${emoji} ${label}`,pts);}
-
-function showToast(msg){
-  const t=document.createElement('div');t.className='toast';t.textContent=msg;
-  document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
-}
-
-// GLOBALS
-window.openModal=openModal;window.closeModal=closeModal;
-window.handleDeduct=handleDeduct;window.handleDeductModal=handleDeductModal;
-window.openCustomModal=openCustomModal;window.confirmCustom=confirmCustom;
-window.restorePoint=restorePoint;window.toggleChore=toggleChore;window.showTab=showTab;
-window.setActiveChild=(c)=>{state.activeChild=c;render();};
-window.setChoreChild=(c)=>{state.choreChild=c;render();};
-window.setArchiveWeek=async(w)=>{state.archiveWeek=w;render();await loadArchiveContent();};
-window.setArchiveChild=async(c)=>{state.archiveChild=c;render();await loadArchiveContent();};
-window.checkPin=checkPin;window.updateMotif=updateMotif;window.toggleMotifActif=toggleMotifActif;
-window.deleteMotif=deleteMotif;window.addMotif=addMotif;window.saveMotifs=saveMotifs;
-
-// INIT
-async function init(){
-  try{
-    await Promise.all([loadWeek(state.weekKey),loadAllWeeks(),loadMotifs()]);
-    render();
-  }catch(e){
-    document.getElementById('main').innerHTML=`<div class="card"><p style="color:#f87171;font-weight:700">❌ Erreur Supabase : ${e.message}</p></div>`;
-  }
-}
-init();
-</script>
-</body>
-</html>
+async function refresh(){const c=cycleBounds();document.querySelector('#cycle').textContent=c.label;const {data,error}=await db.from('realisations').select('*').eq('enfant_id',child.id).eq('cycle_debut',c.key).order('realisee_at',{ascending:false});if(error)throw error;done=data||[];render();}
+async function complete(task){if(!beforeDeadline(task))return alert('Trop tard : cette corvée ne peut plus rapporter de point.');const c=cycleBounds();const row={famille:FAMILLE,enfant_id:child.id,cycle_debut:c.key,date_locale:localDate(),cle:task.key,label:task.label,type:'obligatoire',points:1};const {error}=await db.from('realisations').insert(row);if(error&&error.code!=='23505')return alert(error.message);await refresh();}
+async function addOptional(){const v=document.querySelector('#optional').value;if(!v)return;const [key,label]=OPTIONALS.find(x=>x[0]===v);const c=cycleBounds();const stamp=Date.now();const row={famille:FAMILLE,enfant_id:child.id,cycle_debut:c.key,date_locale:localDate(),cle:`option_${key}_${stamp}`,label,type:'optionnelle',points:1};const {error}=await db.from('realisations').insert(row);if(error)return alert(error.message);await refresh();}
+function render(){const tasks=todayTasks(child.prenom), map=new Set(done.map(x=>x.cle));const tokenMode=new URLSearchParams(location.search).has('token');document.querySelector('#app').innerHTML=`
+ <div class="${tokenMode?'hidden':''} card"><h3>Choisir un enfant</h3><div class="children">${children.map(c=>`<button class="child ${c.id===child.id?'active':''}" onclick="child=children.find(x=>x.id==='${c.id}');refresh()">${c.prenom}</button>`).join('')}</div></div>
+ <section class="hero"><div class="card"><h1>Bonjour ${child.prenom} 👋</h1><p>Chaque corvée réalisée vaut 1 point. La semaine se clôture vendredi à 19 h.</p><div class="score">${points()} point${points()>1?'s':''}</div></div><div class="card"><h2>Temps d’écran</h2><div class="score">${screenMinutes()} min</div><p class="small">Estimation avec ${settings.minutes_par_point} min par point, réglable dans Supabase.</p></div></section>
+ <div class="card"><h2>À faire aujourd’hui</h2><div class="tasks">${tasks.length?tasks.map(t=>{const ok=map.has(t.key),late=!beforeDeadline(t);return `<div class="task ${ok?'done':''}"><div><div class="label">${ok?'✅':'○'} ${t.label}</div><div class="meta">${t.time}${late&&!ok?' · échéance dépassée':''}</div></div><button ${ok||late?'disabled':''} onclick='complete(${JSON.stringify(t)})'>${ok?'Fait':late?'Trop tard':'J’ai fait'}</button></div>`}).join(''):'<p>Aucune corvée obligatoire aujourd’hui.</p>'}</div></div>
+ <div class="card"><h2>J’ai fait une corvée en plus</h2><p>Déclare une corvée optionnelle pour gagner 1 point.</p><div class="optional"><select id="optional"><option value="">Choisir…</option>${OPTIONALS.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('')}</select><button onclick="addOptional()">Ajouter +1</button></div></div>
+ <div class="card"><h2>Activité de la semaine</h2><div class="tasks">${done.length?done.map(r=>`<div class="task done"><div><div class="label">✅ ${r.label}</div><div class="meta">${r.type==='optionnelle'?'Bonus':'Obligatoire'} · ${new Date(r.realisee_at).toLocaleString('fr-FR',{timeZone:'Europe/Paris'})}</div></div><strong>+${r.points}</strong></div>`).join(''):'<p>Aucun point pour le moment.</p>'}</div></div>`}
+load().catch(e=>document.querySelector('#app').innerHTML=`<div class="card error"><h2>Impossible de démarrer</h2><p>${e.message}</p><p>Exécutez d’abord <strong>migration_stoikos.sql</strong> dans Supabase.</p></div>`);
+</script></body></html>
